@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+
+####################################################################################
+# Calculate electron difference between fermi energy and minimun of the pseudo gap #
+# Usage: ediff.py DOSCAR
+####################################################################################
+
+import numpy as np
+from optparse import OptionParser
+from scipy import interpolate
+
+parser=OptionParser();
+(options, args)=parser.parse_args();
+
+fname=args[0];
+dos=np.loadtxt(fname,skiprows=6);
+with open(fname) as fid:
+    lines=fid.readlines();
+dos_info=np.array([float(i) for i in lines[5].split()]);
+emax=dos_info[0];
+emin=dos_info[1];
+enum=dos_info[2];
+egap=(emax-emin)/enum;
+efermi=dos_info[3];
+
+# search for pseudo gap minimun around fermi energy within erange
+erange=1.0;
+nrange=int(erange/egap);
+nmid=int((efermi-emin)/egap);
+npsgap=np.argmin(dos[nmid-nrange:nmid+nrange,1])+nmid-nrange;
+epsgap=dos[npsgap,0];
+
+fdos=interpolate.interp1d(dos[:,0],dos[:,1]);
+ftot=interpolate.interp1d(dos[:,0],dos[:,2]);
+
+ne_fermi=ftot(efermi);
+ne_psgap=ftot(epsgap);
+
+print("{0:%.4f} {1:%.4f}".format( ne_fermi, (ne_psgap-ne_fermi)));
